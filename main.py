@@ -2,13 +2,26 @@ from decouple import config
 from telethon import TelegramClient, events
 from datetime import datetime, timedelta, timezone
 
+from gemini_reply import PROMPT, generate_reply
+
 api_id = config("API_ID")
 api_hash = config("API_HASH")
+
+
 
 client = TelegramClient("userbot_session", api_id, api_hash)
 
 REPLY_WINDOW_MINUTES = 5
 NOT_TO_MESSAGE = [777000]
+
+
+async def get_last_messages(chat_id, limit=10):
+    msgs = []
+    async for m in client.iter_messages(chat_id, limit=limit):
+        msgs.append(m)
+    
+    return list(reversed(msgs))
+
 
 async def reply_to_recent_messages():
     cutoff = datetime.now(timezone.utc) - timedelta(minutes=REPLY_WINDOW_MINUTES)
@@ -31,7 +44,19 @@ async def reply_to_recent_messages():
                 if newer.out:
                     break
             else:
-                await msg.reply("hello")
+                last_messages = await get_last_messages(dialog.id, limit=20)
+                context = ""
+                # print(f"\nContext for {dialog.name}:")
+                for c in last_messages[:-1]:
+                    if c.sender_id==458835871:
+                        context+=f"{dialog.name}: {c.text}\n"
+                    else:
+                        context+=f"Yididya: {c.text}\n"
+                
+                
+                reply_text = generate_reply(PROMPT.format(context,last_messages[-1].text ))
+                print(reply_text)
+                await msg.reply(reply_text)
 
        
 
